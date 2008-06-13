@@ -3,15 +3,10 @@
 require "test/unit"
 
 require "rrdb"
+require File.join(File.dirname(__FILE__), "rrd_manager")
 
 class TestConfig < Test::Unit::TestCase
-  def setup
-    @saved_config = RRDB.config.dup
-  end
-  
-  def teardown
-    RRDB.config.replace(@saved_config)
-  end
+  include RRDManager
   
   def test_config_is_a_hash_with_defaults
     assert_instance_of(Hash, RRDB.config)
