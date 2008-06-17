@@ -39,6 +39,12 @@ class TestUpdate < Test::Unit::TestCase
     end
   end
   
+  def test_ambiguous_field_names_raise_errors
+    assert_raise(RRDB::FieldNameConflictError) do
+      @db.update(Time.now, "ab" => 8, "a'b" => 9)
+    end
+  end
+  
   def test_you_can_retrieve_the_field_name_used
     assert_equal( ("a".."z").to_a.join[0..18],
                   RRDB.field_name(("a".."z").to_a.join.gsub(/\b/, "'")) )
