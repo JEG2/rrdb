@@ -5,9 +5,19 @@ class RRDB
   
   def self.run_command(command)
     output = `#{command} 2>&1`
-    $?.success? ? output : nil
+    if $?.success?
+      @last_error = nil
+      output
+    else
+      @last_error = output
+      nil
+    end
   rescue
     nil
+  end
+  
+  def self.last_error
+    @last_error
   end
   
   def self.config(hash_or_key = nil)
@@ -47,10 +57,12 @@ class RRDB
   end
   
   def update(time, data)
+    p data
     data = Hash[*data.map { |f, v| [f.to_s, v] }.flatten]
     if File.exist? path
       claim_new_fields(data.keys)
     else
+      p "Creating..."
       create_database(time, data.keys)
     end
     rrdtool(:update, "'#{time.to_i}:#{fields.map { |f| data[f].send(data[f].to_s =~ /\A\d+\./ ? :to_f : :to_i) }.join(':')}'")
