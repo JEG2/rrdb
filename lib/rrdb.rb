@@ -3,6 +3,8 @@
 class RRDB
   VERSION = "0.0.1"
   
+  class FieldNameConflictError < RuntimeError; end
+  
   def self.run_command(command)
     output = `#{command} 2>&1`
     if $?.success?
@@ -38,6 +40,10 @@ class RRDB
          :data_sources         => "GAUGE:600:U:U",
          :round_robin_archives => Array.new
   
+  def self.field_name(name)
+    name.to_s.delete("^a-zA-Z0-9_")[0..18]
+  end
+  
   def initialize(id)
     @id = id
   end
@@ -57,15 +63,22 @@ class RRDB
   end
   
   def update(time, data)
-    p data
-    data = Hash[*data.map { |f, v| [f.to_s, v] }.flatten]
-    if File.exist? path
-      claim_new_fields(data.keys)
-    else
-      p "Creating..."
-      create_database(time, data.keys)
+    safe_data = Hash[*data.map { |f, v| [self.class.field_name(f), v] }.flatten]
+    if safe_data.size != data.size or
+       safe_data.keys.any? { |f| not f.size.between?(1, 19) }
+      raise FieldNameConflictError,
+            "Your field names cannot be unambiguously converted to RRDtool " +
+            "field names (1 to 19 [a-zA-Z0-9_] characters)."
     end
-    rrdtool(:update, "'#{time.to_i}:#{fields.map { |f| data[f].send(data[f].to_s =~ /\A\d+\./ ? :to_f : :to_i) }.join(':')}'")
+    if File.exist? path
+      claim_new_fields(safe_data.keys)
+    else
+      create_database(time, safe_data.keys)
+    end
+    params = fields.map do |f|
+      safe_data[f].send(safe_data[f].to_s =~ /\A\d+\./ ? :to_f : :to_i)
+    end
+    rrdtool(:update, "'#{time.to_i}:#{params.join(':')}'")
   end
   
   def fetch(field, range = Hash.new)
