@@ -47,4 +47,20 @@ class TestFetch < Test::Unit::TestCase
                        2 ** -20 )
     end
   end
+  
+  def test_floats_are_supported
+    RRDB.config( :reserve_fields       => 0,
+                 :database_start       => Time.at(920804400),
+                 :data_sources         => {:float => "GAUGE:600:U:U"},
+                 :round_robin_archives => %w[AVERAGE:0.5:1:24] )
+    
+    @db.update(Time.at(920804700), :float => 2.9)
+    @db.update(Time.at(920805000), :float => 2.9)
+    
+    float = @db.fetch( :AVERAGE,
+                       :start => Time.at(920804700),
+                       :end   => Time.at(920804700) ).values.first.values.first
+    assert_instance_of(Float, float)
+    assert_in_delta(2.9, float, 2 ** -20)
+  end
 end
