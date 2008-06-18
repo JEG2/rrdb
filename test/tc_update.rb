@@ -32,6 +32,13 @@ class TestUpdate < Test::Unit::TestCase
     assert_match(/\ACOUNTER:/, @db.fields(true)["b"])
   end
   
+  def test_bad_schema_for_update_raises_tune_error
+    RRDB.config(:reserve_fields => 2)
+    @db.update(Time.now, :a => 1)
+    RRDB.config(:data_sources => {:b => "BAD_FIELD_TYPE"})
+    assert_raise(RRDB::TuneError) { @db.update(Time.now + 10, :b => 2) }
+  end
+  
   def test_running_out_of_fields_to_claim_raises_fields_exhausted_error
     RRDB.config(:reserve_fields => 3)
     test_update_claims_new_fields_as_needed
