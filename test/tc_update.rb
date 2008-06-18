@@ -8,14 +8,35 @@ require File.join(File.dirname(__FILE__), "rrd_manager")
 class TestUpdate < Test::Unit::TestCase
   include RRDManager
   
+  def test_fields_returns_an_empty_array_for_a_non_existent_database
+    assert_equal(Array.new, @db.fields)
+  end
+  
   def test_update_claims_new_fields_as_needed
     @db.update(Time.now, :a => 1)
     %w[b c].each do |field|
       assert(!@db.fields.include?(field), "Unused field in database.")
     end
-    @db.update(Time.now, :b => 2, :c => 3)
+    @db.update(Time.now + 10, :b => 2, :c => 3)
     %w[b c].each do |field|
       assert(@db.fields.include?(field), "Field not claimed in database.")
+    end
+  end
+  
+  def test_fields_are_retyped_on_claim
+    RRDB.config(:reserve_fields => 2)
+    @db.update(Time.now, :a => 1)
+    assert_match(/\AGAUGE:/, @db.fields(true)["_reserved0"])
+    RRDB.config(:data_sources => {:b => "COUNTER:600:U:U"})
+    @db.update(Time.now + 10, :b => 2)
+    assert_match(/\ACOUNTER:/, @db.fields(true)["b"])
+  end
+  
+  def test_running_out_of_fields_to_claim_raises_fields_exhausted_error
+    RRDB.config(:reserve_fields => 3)
+    test_update_claims_new_fields_as_needed
+    assert_raise(RRDB::FieldsExhaustedError) do
+      @db.update(Time.now + 20, :d => 0)
     end
   end
   
@@ -48,5 +69,12 @@ class TestUpdate < Test::Unit::TestCase
   def test_you_can_retrieve_the_field_name_used
     assert_equal( ("a".."z").to_a.join[0..18],
                   RRDB.field_name(("a".."z").to_a.join.gsub(/\b/, "'")) )
+  end
+  
+  def test_illegal_updates_raise_update_error
+    test_unsupported_characters_are_removed_from_names  # create a db
+    assert_raise(RRDB::UpdateError) do
+      @db.update(Time.now - 10, Hash.new)               # time in the past
+    end
   end
 end

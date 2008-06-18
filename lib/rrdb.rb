@@ -3,7 +3,13 @@
 class RRDB
   VERSION = "0.0.1"
   
-  class FieldNameConflictError < RuntimeError; end
+  def self.const_missing(error_name)
+    if error_name.to_s =~ /Error\z/
+      const_set(error_name, Class.new(RuntimeError))
+    else
+      super
+    end
+  end
   
   def self.run_command(command)
     output = `#{command} 2>&1`
@@ -54,12 +60,27 @@ class RRDB
     File.join(self.class.config[:database_directory], "#{id}.rrd")
   end
   
-  def fields
-    rrdtool(:info).to_s.scan(/^ds\[([^\]]+)\]/).flatten.uniq
+  def fields(include_types = false)
+    schema = rrdtool(:info).to_s
+    fields = schema.scan(/^ds\[([^\]]+)\]/).flatten.uniq
+    if include_types
+      Hash[ *fields.map { |f|
+        [ f, "#{schema[/^ds\[#{f}\]\.type\s*=\s*"([^"]+)"/, 1]}:"            +
+             "#{schema[/^ds\[#{f}\]\.minimal_heartbeat\s*=\s*(\d+)/, 1]}:"   + 
+             "#{schema[/^ds\[#{f}\]\.min\s*=\s*(\S+)/, 1].sub('NaN', 'U')}:" +
+             "#{schema[/^ds\[#{f}\]\.max\s*=\s*(\S+)/, 1].sub('NaN', 'U')}" ]
+      }.flatten ]
+    else
+      fields
+    end
+  rescue InfoError
+    include_types ? Hash.new : Array.new
   end
   
   def step
     (rrdtool(:info).to_s[/^step\s+=\s+(\d+)/, 1] || 300).to_i
+  rescue InfoError
+    300
   end
   
   def update(time, data)
@@ -109,16 +130,10 @@ class RRDB
         schema << " --start '#{(time - 10).to_i}'"
       end
     end
-    field_names.each do |f|
-      dst = if (setting = self.class.config[:data_sources]).is_a? String
-              setting
-            else
-              setting[f.to_sym] || setting[f]
-            end
-      schema << " 'DS:#{f}:#{dst}'"
-    end
+    field_names.each { |f| schema << " 'DS:#{f}:#{field_type(f)}'" }
     (self.class.config[:reserve_fields].to_i - field_names.size).times do |i|
-      schema << " 'DS:_reserved#{i}:GAUGE:600:U:U'"
+      name   =  "_reserved#{i}"
+      schema << " 'DS:#{name}:#{field_type(name)}'"
     end
     Array(self.class.config[:round_robin_archives]).each do |a|
       schema << " 'RRA:#{a}'"
@@ -133,19 +148,30 @@ class RRDB
       reserved = old_fields.grep(/\A_reserved\d+\Z/).
                             sort_by { |f| f[/\d+/].to_i }
       if new_fields.size > reserved.size
-        
+        raise FieldsExhaustedError,
+              "There are not enough reserved fields to complete this update."
       else
         claims = new_fields.zip(reserved).
-                            map { |n, o| " --data-source-rename '#{o}:#{n}'"}.
+                            map { |n, o| " -r '#{o}:#{n}'" +
+                                         " -d '#{n}:#{field_type(n)}'" }.
                             join.strip
         rrdtool(:tune, claims)
       end
     end
   end
   
+  def field_type(field_name)
+    if (setting = self.class.config[:data_sources]).is_a? String
+      setting
+    else
+      setting[field_name.to_sym] || setting[field_name] || "GAUGE:600:U:U"
+    end
+  end
+  
   def rrdtool(command, params = nil)
     self.class.run_command(
       "#{self.class.config[:rrdtool_path]} #{command} '#{path}' #{params}"
-    )
+    ) or raise self.class.const_get("#{command.to_s.capitalize}Error"),
+               self.class.last_error
   end
 end

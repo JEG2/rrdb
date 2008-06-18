@@ -63,4 +63,11 @@ class TestFetch < Test::Unit::TestCase
     assert_instance_of(Float, float)
     assert_in_delta(2.9, float, 2 ** -20)
   end
+  
+  def test_calling_fetch_on_a_non_existent_database_raises_fetch_error
+    assert_raise(RRDB::FetchError) do
+      @db.fetch( :AVERAGE, :start => Time.at(920804400),
+                           :end   => Time.at(920809200) )
+    end
+  end
 end
