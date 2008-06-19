@@ -9,7 +9,7 @@ RRDB is intended to be installed via the
 RubyGems[http://rubyforge.org/projects/rubygems/] system.  To get the latest
 version, simply enter the following into your command prompt:
 
-	$ sudo gem install jeg2-rrdb -s http://gems.github.com
+	$ sudo gem install JEG2-rrdb -s http://gems.github.com
 
 You must have RubyGems[http://rubyforge.org/projects/rubygems/] installed for
 the above to work.

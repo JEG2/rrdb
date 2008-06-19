@@ -33,7 +33,8 @@ task :update_gem do
         if line =~ /\A(\s*s\.version\s*=\s*)(["'])\d\.\d\.\d\2\s*\z/
           new_spec.puts %Q{#{$1}"#{version}"}
         elsif line =~ /\A(\s*s\.files\s*=\s*)/
-          new_spec.puts %Q{#{$1}%w[#{Dir["{lib,test}/**/*.rb"].join(" ")}] + %w[Rakefile setup.rb]}
+          new_spec.puts %Q{#{$1}%w[#{Dir["{lib,test}/**/*.rb"].join(" ")} } +
+                        "Rakefile setup.rb]"
         else
           new_spec.puts line
         end
