@@ -1,0 +1,22 @@
+= Read Me
+
+by James Edward Gray II
+
+== Description
+
+RRDB is a simple wrapper around RRDtool for managing round robin database files.
+Methods are provided to create new databases, update them with new data, and
+fetch archives back out.
+
+== Documentation
+
+See RRDB for documentation.
+
+== Installing
+
+See the INSTALL file for instructions.
+
+== Questions and/or Comments
+
+Feel free to email {James Edward Gray II}[mailto:james@graysoftinc.com] with any
+questions.
