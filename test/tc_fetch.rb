@@ -48,6 +48,23 @@ class TestFetch < Test::Unit::TestCase
     end
   end
   
+  def test_all_fields_are_converted_to_numbers
+    RRDB.config( :reserve_fields       => 0,
+                 :database_start       => Time.at(920804400),
+                 :data_sources         => { :comma => "GAUGE:600:U:U",
+                                            :kb    => "GAUGE:600:U:U" },
+                 :round_robin_archives => %w[AVERAGE:0.5:1:24] )
+    
+    @db.update(Time.at(920804700), :comma => "17,000", :kb => "10 kb")
+    @db.update(Time.at(920805000), :comma => "17,000", :kb => "10 kb")
+    
+    values = @db.fetch( :AVERAGE,
+                       :start => Time.at(920804700),
+                       :end   => Time.at(920804700) ).values.first
+    assert_equal(17_000, values["comma"])
+    assert_equal(10,     values["kb"])
+  end
+  
   def test_floats_are_supported
     RRDB.config( :reserve_fields       => 0,
                  :database_start       => Time.at(920804400),

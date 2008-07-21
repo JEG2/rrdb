@@ -240,7 +240,8 @@ class RRDB
       create_database(time, safe_data.keys)
     end
     params = fields.map do |f|
-      safe_data[f].send(safe_data[f].to_s =~ /\A\d+\./ ? :to_f : :to_i)
+      digits = safe_data[f].to_s.delete("^0-9.")
+      digits.send(digits.include?(".") ? :to_f : :to_i)
     end
     rrdtool(:update, "'#{time.to_i}:#{params.join(':')}'")
   end
