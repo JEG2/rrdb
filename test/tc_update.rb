@@ -48,8 +48,20 @@ class TestUpdate < Test::Unit::TestCase
   end
   
   def test_unsupported_characters_are_removed_from_names
-    @db.update(Time.now, "a'b=" => 4)
+    @db.update(Time.now, "a'b)" => 4)
     assert(@db.fields.include?("ab"), "Trimmed field name not found.")
+  end
+  
+  def test_common_symbols_are_translated
+    @db.update(Time.now, '~ z ! @#$%^&*-+=|<>./?' => 4)
+    assert( @db.fields.include?("tzbahdpcnmmveplgddq"),
+            "Common symbols were not translated." )
+  end
+  
+  def test_fields_that_differ_only_by_symbol
+    @db.update(Time.now, "Swap Used" => 1, "% Swap Used" => 2)
+    assert(@db.fields.include?("SwapUsed"), "Non-symbol field was not found.")
+    assert(@db.fields.include?("pSwapUsed"), "Symbol field was not found.")
   end
   
   def test_long_field_names_are_shortened_on_entry
@@ -63,7 +75,7 @@ class TestUpdate < Test::Unit::TestCase
       @db.update(Time.now, String.new => 6)
     end
     assert_raise(RRDB::FieldNameConflictError) do
-      @db.update(Time.now, "!@\#$%^&*" => 7)
+      @db.update(Time.now, "`(){}[]'" => 7)
     end
   end
   

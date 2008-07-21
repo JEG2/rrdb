@@ -136,7 +136,8 @@ class RRDB
   # the values your application prefers.
   # 
   def self.field_name(name)
-    name.to_s.delete("^a-zA-Z0-9_")[0..18]
+    name.to_s.tr( "-~!@\#$%^&*+=|<>./?",
+                  "mtbahdpcnmveplgddq" ).delete("^a-zA-Z0-9_")[0..18]
   end
   
   #
