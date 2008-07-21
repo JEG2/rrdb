@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
                        "them."
   s.homepage         = "http://github.com/JEG2/rrdb"
   s.date             = "2008-06-19"
-  s.version          = "0.0.1"
+  s.version          = "0.0.2"
   s.platform         = Gem::Platform::RUBY
   s.authors          = ["James Edward Gray II"]
   s.email            = "james@graysoftinc.com"
